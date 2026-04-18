@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QuizPDF — Smart PDF Quiz Practice</title>
+  <meta name="description" content="Upload your PDF study materials and generate randomized MCQ quizzes for quick revision and practice." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <!-- PDF.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+</head>
+<body>
+
+  <!-- ─── NAVBAR ─── -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-brand" onclick="app.goHome()" style="cursor:pointer">
+      <span class="nav-logo">⚡</span>
+      <span class="nav-title">QuizPDF</span>
+    </div>
+    <div class="nav-right">
+      <button class="btn btn-ghost btn-sm" id="navHistoryBtn" onclick="app.showHistory()" style="display:none">📊 History</button>
+      <button class="btn btn-ghost btn-sm" id="navHomeBtn" onclick="app.goHome()" style="display:none">🏠 Home</button>
+    </div>
+  </nav>
+
+  <!-- ═══════════════════════════════════════
+       VIEW 1 — UPLOAD
+  ════════════════════════════════════════ -->
+  <div id="view-upload" class="view active">
+
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero-glow hero-glow-1"></div>
+      <div class="hero-glow hero-glow-2"></div>
+      <div class="hero-content">
+        <div class="hero-badge">✨ Instant PDF → Quiz</div>
+        <h1 class="hero-title">Turn Your Study PDFs<br /><span class="gradient-text">Into Smart Quizzes</span></h1>
+        <p class="hero-subtitle">Upload NPTEL / university MCQ PDFs and practice with perfectly extracted questions — randomized across all your files.</p>
+      </div>
+    </section>
+
+    <div class="container">
+
+      <!-- Upload Zone -->
+      <div class="upload-zone" id="uploadZone" tabindex="0" role="button" aria-label="Upload PDF files">
+        <div class="upload-icon-wrap">
+          <div class="upload-icon">📄</div>
+          <div class="upload-icon-ring"></div>
+        </div>
+        <h3 class="upload-title">Drop PDF files here</h3>
+        <p class="upload-sub">or click to browse your computer</p>
+        <button class="btn btn-primary" id="uploadBtn" onclick="document.getElementById('fileInput').click()">Choose PDFs</button>
+        <input type="file" id="fileInput" accept=".pdf" multiple style="display:none" />
+      </div>
+
+      <!-- Divider -->
+      <div class="divider"><span>or add via link</span></div>
+
+      <!-- Google Drive URL -->
+      <div class="url-row">
+        <div class="url-input-wrap">
+          <span class="url-prefix-icon">🔗</span>
+          <input
+            type="text"
+            id="driveUrlInput"
+            class="url-input"
+            placeholder="Paste Google Drive share link: https://drive.google.com/file/d/..."
+          />
+          <button class="btn btn-secondary" id="loadUrlBtn" onclick="app.loadFromUrl()">Load</button>
+        </div>
+        <p class="url-hint">Make sure the Drive file is set to <strong>"Anyone with the link"</strong> → Viewer</p>
+      </div>
+
+      <!-- PDF Library -->
+      <section id="librarySection" style="display:none">
+        <div class="section-header">
+          <h2 class="section-title">📚 Question Bank</h2>
+          <div id="libraryStats" class="library-stats"></div>
+        </div>
+        <div class="pdf-grid" id="pdfLibrary"></div>
+        <div class="library-cta">
+          <button class="btn btn-primary btn-xl" id="startQuizBtn" onclick="app.showConfig()">
+            <span>🚀</span> Start Quiz
+          </button>
+          <button class="btn btn-ghost btn-sm" onclick="app.clearLibrary()">🗑 Clear All</button>
+        </div>
+      </section>
+
+    </div><!-- /container -->
+
+    <!-- Processing Overlay -->
+    <div class="proc-overlay" id="processingOverlay" style="display:none">
+      <div class="proc-card">
+        <div class="proc-spinner"></div>
+        <div class="proc-status" id="processingText">Reading PDF…</div>
+        <div class="proc-bar-wrap">
+          <div class="proc-bar" id="processingFill" style="width:0%"></div>
+        </div>
+        <div class="proc-substatus" id="processingSubText">Extracting text from pages…</div>
+      </div>
+    </div>
+
+  </div><!-- /view-upload -->
+
+
+  <!-- ═══════════════════════════════════════
+       VIEW 2 — CONFIG
+  ════════════════════════════════════════ -->
+  <div id="view-config" class="view">
+    <div class="container container-narrow">
+      <div class="card">
+        <button class="back-btn" onclick="app.goHome()">← Back</button>
+        <h2 class="card-title">⚙️ Quiz Settings</h2>
+
+        <!-- PDF selection -->
+        <div class="cfg-section">
+          <div class="cfg-label">Select PDFs to include</div>
+          <div class="pdf-check-grid" id="pdfSelectGrid"></div>
+          <div class="cfg-actions-row">
+            <button class="btn btn-ghost btn-sm" onclick="app.selectAllPdfs(true)">Select All</button>
+            <button class="btn btn-ghost btn-sm" onclick="app.selectAllPdfs(false)">Deselect All</button>
+          </div>
+        </div>
+
+        <!-- Question count -->
+        <div class="cfg-section">
+          <div class="cfg-label">Number of questions</div>
+          <div class="chip-group" id="countChips">
+            <button class="chip active" data-val="all"  onclick="app.setCount('all', this)">All</button>
+            <button class="chip"        data-val="10"   onclick="app.setCount(10, this)">10</button>
+            <button class="chip"        data-val="20"   onclick="app.setCount(20, this)">20</button>
+            <button class="chip"        data-val="30"   onclick="app.setCount(30, this)">30</button>
+            <button class="chip"        data-val="50"   onclick="app.setCount(50, this)">50</button>
+          </div>
+          <input type="number" id="customCount" class="cfg-input" placeholder="Or type a custom number…" min="1" max="500" />
+        </div>
+
+        <!-- Timer -->
+        <div class="cfg-section">
+          <div class="cfg-label">Timer per question</div>
+          <label class="toggle-row">
+            <div class="toggle-track" id="timerToggle" onclick="app.toggleTimer()">
+              <div class="toggle-thumb"></div>
+            </div>
+            <span class="toggle-text" id="timerToggleLabel">Disabled</span>
+          </label>
+          <div class="chip-group" id="timerChips" style="display:none; margin-top:12px">
+            <button class="chip active" data-secs="30"  onclick="app.setTimerSecs(30,  this)">30 s</button>
+            <button class="chip"        data-secs="60"  onclick="app.setTimerSecs(60,  this)">60 s</button>
+            <button class="chip"        data-secs="90"  onclick="app.setTimerSecs(90,  this)">90 s</button>
+            <button class="chip"        data-secs="120" onclick="app.setTimerSecs(120, this)">2 min</button>
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-xl btn-full" onclick="app.beginQuiz()">🎯 Begin Quiz</button>
+      </div>
+    </div>
+  </div><!-- /view-config -->
+
+
+  <!-- ═══════════════════════════════════════
+       VIEW 3 — QUIZ
+  ════════════════════════════════════════ -->
+  <div id="view-quiz" class="view">
+
+    <!-- Quiz top bar -->
+    <div class="quiz-bar">
+      <div class="quiz-bar-left">
+        <span class="quiz-prog-label" id="quizProgLabel">1 / 10</span>
+        <span class="quiz-source-badge" id="quizSourceBadge"></span>
+      </div>
+      <div class="quiz-bar-right">
+        <div class="quiz-timer" id="quizTimer" style="display:none">
+          <span class="timer-icon">⏱</span>
+          <span id="timerVal">60</span>s
+        </div>
+        <button class="btn btn-ghost btn-sm quit-btn" onclick="app.quitQuiz()">✕ Quit</button>
+      </div>
+    </div>
+
+    <!-- Progress bar -->
+    <div class="quiz-progress-track">
+      <div class="quiz-progress-fill" id="quizProgressFill"></div>
+    </div>
+
+    <div class="container container-narrow">
+      <div class="question-card" id="questionCard">
+        <div class="q-number" id="qNumber">Q 1</div>
+        <div class="q-type-badge" id="qTypeBadge"></div>
+        <div class="q-text" id="qText"></div>
+        <div class="options-list" id="optionsList"></div>
+        <div class="quiz-nav">
+          <button class="btn btn-ghost" id="prevBtn" onclick="app.prevQ()" style="display:none">← Prev</button>
+          <button class="btn btn-primary" id="nextBtn" onclick="app.nextQ()">Next →</button>
+        </div>
+        <div class="skip-note" id="skipNote">Select an answer to continue</div>
+      </div>
+    </div>
+
+  </div><!-- /view-quiz -->
+
+
+  <!-- ═══════════════════════════════════════
+       VIEW 4 — RESULTS
+  ════════════════════════════════════════ -->
+  <div id="view-results" class="view">
+    <div class="container container-narrow">
+
+      <div class="results-hero" id="resultsHero">
+        <div class="score-ring-wrap">
+          <svg class="score-ring" viewBox="0 0 120 120">
+            <circle class="score-ring-bg" cx="60" cy="60" r="52" />
+            <circle class="score-ring-fill" id="scoreArc" cx="60" cy="60" r="52" />
+          </svg>
+          <div class="score-inner">
+            <div class="score-pct" id="scorePct">0%</div>
+            <div class="score-lbl">Score</div>
+          </div>
+        </div>
+        <div class="score-stats" id="scoreStats"></div>
+        <div class="score-feedback" id="scoreFeedback"></div>
+      </div>
+
+      <div class="results-btn-row">
+        <button class="btn btn-primary" onclick="app.retryQuiz()">🔄 Retry</button>
+        <button class="btn btn-secondary" onclick="app.showConfig()">⚙️ New Config</button>
+        <button class="btn btn-ghost" onclick="app.goHome()">🏠 Home</button>
+      </div>
+
+      <div class="review-section">
+        <h3 class="review-heading">📋 Full Review</h3>
+        <div id="reviewList"></div>
+      </div>
+
+    </div>
+  </div><!-- /view-results -->
+
+  <!-- Toast -->
+  <div class="toast" id="toast" aria-live="polite"></div>
+
+  <!-- Confetti canvas -->
+  <canvas id="confettiCanvas" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;display:none;"></canvas>
+
+  <script src="storage.js"></script>
+  <script src="pdf-parser.js"></script>
+  <script src="quiz-engine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
