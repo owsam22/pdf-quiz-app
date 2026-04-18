@@ -193,11 +193,11 @@ const PDFParser = (() => {
      ═══════════════════════════════════════════════════════════ */
 
   /* Detects if a line is the start of a new question */
-  // Patterns: "1.", "1 .", "1)" —  but NOT option patterns like "(a)"
-  const Q_START_RE   = /^(\d+)[.)]\s+\S/;
-  /* Detects option lines: "(a)", "(b)", "(A)", "a)", "a.", "A).", "A.)" */
-  const OPT_RE       = /^\([a-dA-D]\)\s*\S|^[a-dA-D][.)]+\s+\S/;
-  const OPT_LETTER_RE= /^\(?([a-dA-D])[.)]+\s*(.*)/;
+  // Patterns: "1.", "1 .", "1)", "1 ."
+  const Q_START_RE   = /^(\d+)\s*[.)]\s*/;
+  /* Detects option lines: "(a)", "a)", "a.", "A).", "A.)", "A )" */
+  const OPT_RE       = /^\(?([a-dA-D])[\s.)\]]+\s*\S/;
+  const OPT_LETTER_RE= /^\(?([a-dA-D])[\s.)\]]+\s*(.*)/;
 
   /**
    * Determine question type from question text content and options.
@@ -236,8 +236,8 @@ const PDFParser = (() => {
       if (!qMatch) { i++; continue; }
 
       const qNum = parseInt(qMatch[1], 10);
-      // Collect question text (may span multiple lines until first option or next question)
-      let qTextParts = [line.replace(/^\d+[.)]\s+/, '').trim()];
+      // Collect question text
+      let qTextParts = [line.replace(/^(\d+)\s*[.)]\s*/, '').trim()];
       i++;
 
       while (i < workLines.length) {
