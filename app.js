@@ -525,11 +525,11 @@ const app = (() => {
     const offset = QuizEngine.getScoreArcOffset(score.percentage);
     const arc    = $('scoreArc');
 
-    // Set color based on score
-    let color = '#f43f5e';
-    if (score.percentage >= 80) color = '#10b981';
-    else if (score.percentage >= 60) color = '#f59e0b';
-    else if (score.percentage >= 40) color = '#6366f1';
+    // Set color based on score (Bright Theme)
+    let color = 'var(--rose)';
+    if (score.percentage >= 80) color = 'var(--green)';
+    else if (score.percentage >= 60) color = 'var(--amber)';
+    else if (score.percentage >= 40) color = 'var(--accent)';
     arc.style.stroke = color;
 
     // Animate the ring
