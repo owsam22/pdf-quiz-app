@@ -380,8 +380,14 @@ const app = (() => {
     $('quizProgressFill').style.width = `${pct}%`;
 
     // Card
+    // Card
     $('qNumber').textContent   = `Q ${idx + 1}`;
-    $('qTypeBadge').textContent = q.type !== 'MCQ' ? q.type : '';
+    
+    // Improved Tag: Show Type + Source?
+    const type = q.type || 'MCQ';
+    $('qTypeBadge').innerHTML = `<span>🏷️</span> ${type}`;
+    $('qTypeBadge').style.display = 'inline-flex';
+    
     $('qText').textContent     = q.question;
 
     // Options
@@ -398,12 +404,15 @@ const app = (() => {
 
       if (alreadyAnswered) {
         btn.disabled = true;
-        if (letter === q.answer) {
+        const isCorrect = letter.toLowerCase() === q.answer.toLowerCase();
+        const isUserChoice = letter.toLowerCase() === userChoice.toLowerCase();
+
+        if (isCorrect) {
           btn.classList.add('correct');
-        } else if (letter === userChoice) {
+        } else if (isUserChoice) {
           btn.classList.add('wrong');
         }
-      } else if (letter === userChoice) {
+      } else if (userChoice && letter.toLowerCase() === userChoice.toLowerCase()) {
         btn.classList.add('selected');
       }
 
@@ -458,17 +467,24 @@ const app = (() => {
 
     // Re-render options with correct/wrong highlights
     const buttons = document.querySelectorAll('.option-btn');
+    const correctLetter = q.answer.toLowerCase();
+
     buttons.forEach(btn => {
       btn.disabled = true;
-      const l = btn.dataset.letter;
-      if (l === q.answer) {
+      const l = btn.dataset.letter.toLowerCase();
+      if (l === correctLetter) {
         btn.classList.add('correct');
-      } else if (l === letter && letter !== q.answer) {
+      } else if (l === letter.toLowerCase() && l !== correctLetter) {
         btn.classList.add('wrong');
       }
     });
 
-    $('skipNote').textContent = letter === q.answer ? '✅ Correct!' : `❌ Correct answer: (${q.answer.toUpperCase()}) ${q.options[q.answer] || ''}`;
+    const isMatch = letter.toLowerCase() === correctLetter;
+    const correctText = q.options[q.answer] || q.options[correctLetter] || '';
+    
+    $('skipNote').innerHTML = isMatch 
+      ? '<span style="color:var(--green)">✅ Correct!</span>' 
+      : `<span style="color:var(--rose)">❌ Correct answer:</span> <strong>(${correctLetter.toUpperCase()}) ${escHtml(correctText)}</strong>`;
   }
 
   function nextQ() {
