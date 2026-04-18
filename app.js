@@ -207,14 +207,7 @@ const app = (() => {
     const stats   = $('libraryStats');
 
     if (!state.banks.length) {
-      section.style.display = 'block';
-      lib.innerHTML = `
-        <div class="library-empty">
-          <i data-lucide="library" size="40"></i>
-          <div>Your library is empty. Upload a PDF above to get started!</div>
-        </div>
-      `;
-      if (window.lucide) lucide.createIcons();
+      section.style.display = 'none';
       return;
     }
 
@@ -231,29 +224,17 @@ const app = (() => {
       const pct    = total > 0 ? Math.round((validQ / total) * 100) : 0;
       return `
         <div class="pdf-card" id="bank_${bank.id}">
-          <button class="pdf-card-remove" onclick="app.removeBank('${bank.id}')" title="Remove PDF">
-            <i data-lucide="trash-2" size="14"></i>
-          </button>
-          <div class="pdf-card-icon">
-            <i data-lucide="file-text"></i>
-          </div>
+          <button class="pdf-card-remove" onclick="app.removeBank('${bank.id}')">✕</button>
+          <div class="pdf-card-icon">📄</div>
           <div class="pdf-card-name">${escHtml(bank.name)}</div>
-          <div class="pdf-card-count">
-            <i data-lucide="check-circle-2" size="14"></i> ${validQ} questions
-          </div>
-          ${bank.warnings > 0 ? `
-          <div class="pdf-card-status">
-            <i data-lucide="alert-circle" size="12"></i> ${bank.warnings} missing answers
-          </div>` : ''}
+          <div class="pdf-card-count">✅ ${validQ} quiz-ready questions</div>
+          ${bank.warnings > 0 ? `<div class="pdf-card-status">⚠️ ${bank.warnings} missing answers (excluded)</div>` : ''}
           <div class="pdf-card-progress">
             <div class="pdf-card-progress-fill" style="width:${pct}%"></div>
           </div>
         </div>
       `;
     }).join('');
-
-    // Re-run Lucide
-    if (window.lucide) lucide.createIcons();
   }
 
   function removeBank(bankId) {
@@ -434,8 +415,6 @@ const app = (() => {
       optList.appendChild(btn);
     });
 
-    if (window.lucide) lucide.createIcons();
-
     // Nav buttons
     $('prevBtn').style.display = idx > 0 ? '' : 'none';
     $('nextBtn').textContent   = idx === total - 1 ? 'Finish 🏁' : 'Next →';
@@ -567,13 +546,13 @@ const app = (() => {
     const reviewList = $('reviewList');
     reviewList.innerHTML = state.sessionQuestions.map((q, idx) => {
       const ua = state.userAnswers.get(q.id);
-      let icon, cls;
+      let status, cls;
       if (!ua) {
-        icon = 'minus-circle'; cls = 'review-skip';
+        status = '⏩'; cls = 'review-skip';
       } else if (ua === q.answer) {
-        icon = 'check-circle-2'; cls = 'review-correct';
+        status = '✅'; cls = 'review-correct';
       } else {
-        icon = 'x-circle'; cls = 'review-wrong';
+        status = '❌'; cls = 'review-wrong';
       }
 
       const userOptText    = ua ? `(${ua.toUpperCase()}) ${escHtml(q.options[ua] || '')}` : 'Skipped';
@@ -583,9 +562,7 @@ const app = (() => {
         <div class="review-item ${cls}">
           <div class="review-q-header">
             <span class="review-q-num">Q${idx + 1} · ${escHtml(q.source)}</span>
-            <div class="review-status-icon ${ua === q.answer ? 'correct' : (ua ? 'wrong' : 'skip')}">
-               <i data-lucide="${icon}" size="16"></i>
-            </div>
+            <span class="review-status-icon">${status}</span>
           </div>
           <div class="review-q-text">${escHtml(q.question)}</div>
           ${ua && ua !== q.answer ? `
@@ -604,8 +581,6 @@ const app = (() => {
         </div>
       `;
     }).join('');
-
-    if (window.lucide) lucide.createIcons();
   }
 
   function retryQuiz() {
