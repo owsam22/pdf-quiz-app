@@ -89,7 +89,7 @@ const PDFParser = (() => {
     /^Indian\s+Institute\s+of\s+Technology/i,
     /^Course\s+Name\s*:/i,
     /^Instructor\s*:/i,
-    /^Prof\.\s+/i,
+    /^Prof\.?\s*/i,
     /^\*+\s*End\s+of/i,                   // "*** End of Page ***"
     /^\*+\s*[A-Z ]+\*+$/i,              // "********** END OF THE PAGE ************"
     /^\*+\s*$/,                           // lines of only asterisks
@@ -144,14 +144,18 @@ const PDFParser = (() => {
       }
 
       if (
-        (l.includes('question number') || l.includes('question no') || l.includes('question correct')) &&
-        (l.includes('correct') || l.includes('answer') || l.includes('option'))
+        (l.includes('question') || l.includes('q.')) &&
+        (/question\s*number/i.test(l) || /question\s*no/i.test(l) || /question\s*correct/i.test(l)) &&
+        (/correct/i.test(l) || /answer/i.test(l) || /option/i.test(l))
       ) {
         tableStartIdx = i;
         break;
       }
-      // Also catch simpler variants: "Ans:" table, standalone table header
-      if (/^(question\s*no\.?\s*correct|q\.?\s+ans\.?)/i.test(lines[i])) {
+      // Also catch simpler variants: "Ans:" table, standalone table header, or directly the header from example 3
+      if (
+        /^(question\s*no\.?\s*correct|q\.?\s+ans\.?)/i.test(lines[i]) ||
+        /question\s+correct\s+option\s+\/\s+answer/i.test(l)
+      ) {
         tableStartIdx = i;
         break;
       }
