@@ -91,9 +91,11 @@ const PDFParser = (() => {
     /^Instructor\s*:/i,
     /^Prof\.\s+/i,
     /^\*+\s*End\s+of/i,                   // "*** End of Page ***"
+    /^\*+\s*[A-Z ]+\*+$/i,              // "********** END OF THE PAGE ************"
     /^\*+\s*$/,                           // lines of only asterisks
     /^-{3,}PAGE_BREAK-{3,}$/,            // our own separator
     /^_{3,}$/,                            // underline separators
+    /^\|?\s*Page\s*$/i,                   // "| Page"
   ];
 
   function isNoiseLine(line) {
@@ -134,8 +136,15 @@ const PDFParser = (() => {
     // Find the header row
     for (let i = 0; i < lines.length; i++) {
       const l = lines[i].toLowerCase();
+      
+      // Look for "Answer keys:" or "Answer key:" or "Answers:"
+      if (/^answer\s*keys?\b/i.test(l) || /^answers\b/i.test(l)) {
+        tableStartIdx = i;
+        break;
+      }
+
       if (
-        (l.includes('question number') || l.includes('question no')) &&
+        (l.includes('question number') || l.includes('question no') || l.includes('question correct')) &&
         (l.includes('correct') || l.includes('answer') || l.includes('option'))
       ) {
         tableStartIdx = i;
@@ -152,7 +161,7 @@ const PDFParser = (() => {
 
     // Parse rows below the header
     // Row formats encountered:
-    //   "1 (a)"   "1 a"   "1. (a)"   "1 (True)"   "10 (b)"
+    //   "1 (a)"   "1 a"   "1. (a)"   "1 (True)"   "10 (b)"   "1. b)"
     const ROW_RE = /^(\d+)[\s.\-:]+([\(\[]?([a-dA-D]|True|False|true|false|TRUE|FALSE)[\)\]]?)/;
 
     for (let i = tableStartIdx + 1; i < lines.length; i++) {
@@ -182,19 +191,28 @@ const PDFParser = (() => {
   /* Detects if a line is the start of a new question */
   // Patterns: "1.", "1 .", "1)" —  but NOT option patterns like "(a)"
   const Q_START_RE   = /^(\d+)[.)]\s+\S/;
-  /* Detects option lines: "(a)", "(b)", "(A)", "a)", "a." */
-  const OPT_RE       = /^\([a-dA-D]\)\s*\S|^[a-dA-D][.)]\s+\S/;
-  const OPT_LETTER_RE= /^\(?([a-dA-D])[.)]\s*(.*)/;
+  /* Detects option lines: "(a)", "(b)", "(A)", "a)", "a.", "A).", "A.)" */
+  const OPT_RE       = /^\([a-dA-D]\)\s*\S|^[a-dA-D][.)]+\s+\S/;
+  const OPT_LETTER_RE= /^\(?([a-dA-D])[.)]+\s*(.*)/;
 
   /**
-   * Determine question type from question text content.
+   * Determine question type from question text content and options.
    */
-  function detectType(qText) {
-    const lower = qText.toLowerCase();
-    if (lower.includes('true/false') || lower.includes('(true/false)') || lower.includes('true or false'))
+  function detectType(qText, options = {}) {
+    const lowerQ = qText.toLowerCase();
+    
+    // Check question text first
+    if (lowerQ.includes('true/false') || lowerQ.includes('(true/false)') || lowerQ.includes('true or false'))
       return 'True / False';
-    if (lower.includes('fill in the blank') || lower.includes('fill in the blanks') || lower.includes('fill-in'))
+    if (lowerQ.includes('fill in the blank') || lowerQ.includes('fill in the blanks') || lowerQ.includes('fill-in'))
       return 'Fill in the Blank';
+    
+    // Check options if available
+    const optValues = Object.values(options).map(v => v.trim().toLowerCase());
+    if (optValues.includes('true') && optValues.includes('false')) {
+      return 'True / False';
+    }
+
     return 'MCQ';
   }
 
@@ -258,7 +276,7 @@ const PDFParser = (() => {
       // Must have at least 2 options to be valid
       if (Object.keys(options).length < 2) continue;
 
-      const type   = detectType(qText);
+      const type   = detectType(qText, options);
       const answer = answerKey.get(qNum) || null;
 
       /* Resolve 'true'/'false' answers to option letters for True/False questions.
